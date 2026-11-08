@@ -1,0 +1,971 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#eef2ff">
+<title>Timer</title>
+
+<style>
+:root {
+  color-scheme: dark;
+  --bg: #273992;
+  --text: #f7f8ff;
+  --muted: #cbd4f5;
+  --accent: #a9c7ff;
+  --accent-text: #18265e;
+  --soft: rgba(255,255,255,.14);
+  --soft-hover: rgba(255,255,255,.22);
+  --track: rgba(255,255,255,.16);
+  --ring: #c6d9ff;
+}
+
+body.light {
+  color-scheme: light;
+  --bg: #eef2ff;
+  --text: #1c285b;
+  --muted: #596a9c;
+  --accent: #273992;
+  --accent-text: #ffffff;
+  --soft: rgba(39,57,146,.10);
+  --soft-hover: rgba(39,57,146,.17);
+  --track: rgba(39,57,146,.13);
+  --ring: #273992;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  transition: background .25s, color .25s;
+}
+
+button, input { font: inherit; }
+
+button {
+  border: 0;
+  outline: 0;
+  cursor: pointer;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .15s, transform .15s, opacity .15s;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
+}
+
+button:active { transform: scale(.97); }
+
+button:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+/* Main layout */
+
+.app {
+  width: min(100%, 920px);
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: auto;
+  padding: 8px 28px 10px;
+  display: flex;
+  flex-direction: column;
+}
+
+.topbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  flex-shrink: 0;
+}
+
+.icon-btn {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--soft);
+  color: var(--text);
+}
+
+.icon-btn:hover { background: var(--soft-hover); }
+
+.icon-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Timer workspace */
+
+.workspace {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 2px 0 5px;
+}
+
+.mode-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--soft);
+}
+
+.mode-tab {
+  min-width: 94px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mode-tab.active {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+/* Circular timer */
+
+.clock-wrap {
+  width: min(70vw, 420px, 48vh);
+  min-width: 220px;
+  aspect-ratio: 1;
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.progress-ring {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.ring-track,
+.ring-progress {
+  fill: none;
+  stroke-width: 7;
+}
+
+.ring-track { stroke: var(--track); }
+
+.ring-progress {
+  stroke: var(--ring);
+  stroke-linecap: round;
+  transition: stroke-dashoffset .2s linear;
+}
+
+.clock-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.time {
+  font-size: clamp(62px, 10.5vw, 100px);
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -.065em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: #f7f8ff;
+}
+
+body.light .time {
+  color: #273992;
+}
+
+.clock-caption {
+  min-height: 18px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+}
+
+/* Sound icon inside circle */
+
+.sound-note {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  margin-top: -5px;
+}
+
+.sound-note button {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--soft);
+  color: var(--text);
+}
+
+.sound-note button:hover { background: var(--soft-hover); }
+
+.sound-note svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Presets */
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: 560px;
+}
+
+.preset {
+  min-width: 42px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.preset:hover { background: var(--soft-hover); }
+
+.preset.active {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+/* Custom time */
+
+.custom-time {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.custom-time input {
+  width: 58px;
+  padding: 6px 6px;
+  border: 0;
+  border-radius: 9px;
+  outline: none;
+  background: var(--soft);
+  color: var(--text);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.custom-time input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.custom-time span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.set-btn {
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.set-btn:hover { background: var(--soft-hover); }
+
+/* Main controls */
+
+.actions,
+.adjustments {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.action-btn,
+.adjust-btn {
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 800;
+  letter-spacing: .035em;
+}
+
+.action-btn {
+  width: 116px;
+  min-width: 116px;
+  height: 36px;
+  padding: 0 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.adjust-btn {
+  min-width: 82px;
+  padding: 7px 11px;
+  font-size: 11px;
+}
+
+.action-btn:hover,
+.adjust-btn:hover {
+  filter: brightness(1.08);
+}
+
+.adjustments { margin-top: -2px; }
+
+/* Keep layout positions unchanged between modes */
+
+.mode-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Fullscreen */
+
+.fullscreen .app {
+  width: 100%;
+  max-width: none;
+  padding: 12px 30px 20px;
+}
+
+.fullscreen .clock-wrap {
+  width: min(70vh, 480px, 72vw);
+}
+
+.fullscreen .workspace { gap: 16px; }
+
+.fullscreen .time {
+  font-size: clamp(76px, 13vh, 128px);
+}
+
+.fullscreen .presets,
+.fullscreen .custom-time {
+  display: none;
+}
+
+/* Responsive */
+
+@media (max-height: 720px) {
+  .app { padding-top: 5px; padding-bottom: 5px; }
+  .workspace { gap: 5px; }
+
+  .clock-wrap {
+    width: min(52vh, 360px, 68vw);
+    min-width: 210px;
+  }
+
+  .time { font-size: clamp(56px, 9vw, 84px); }
+
+  .preset { padding: 6px 9px; }
+  .action-btn { height: 35px; }
+}
+
+@media (max-width: 520px) {
+  .app { padding: 7px 16px 9px; }
+  .workspace { gap: 7px; }
+
+  .clock-wrap {
+    width: min(78vw, 360px, 48vh);
+    min-width: 210px;
+  }
+
+  .time { font-size: clamp(54px, 15vw, 82px); }
+  .mode-tab { min-width: 90px; }
+
+  .action-btn {
+    width: 112px;
+    min-width: 112px;
+  }
+
+  .adjust-btn { min-width: 80px; }
+}
+
+/* Keep fullscreen font size larger on smaller screens too */
+
+@media (max-height: 720px) {
+  .fullscreen .time {
+    font-size: clamp(76px, 13vh, 128px);
+  }
+}
+</style>
+</head>
+
+<body class="light">
+<div class="app">
+
+  <header class="topbar">
+    <button class="icon-btn" id="themeBtn"
+      type="button" aria-label="Change theme" title="Change theme">
+      <svg id="themeIcon" viewBox="0 0 24 24">
+        <path d="M20.5 15.5A8.5 8.5 0 0 1 8.5 3.5 8.5 8.5 0 1 0 20.5 15.5Z"/>
+      </svg>
+    </button>
+
+    <button class="icon-btn" id="fullscreenBtn"
+      type="button" aria-label="Enter fullscreen" title="Fullscreen">
+      <svg id="fullscreenIcon" viewBox="0 0 24 24">
+        <path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/>
+      </svg>
+    </button>
+  </header>
+
+  <main class="workspace">
+
+    <nav class="mode-tabs">
+      <button class="mode-tab active" id="timerMode" type="button">Timer</button>
+      <button class="mode-tab" id="stopwatchMode" type="button">Stopwatch</button>
+    </nav>
+
+    <section class="clock-wrap">
+      <svg class="progress-ring" id="progressRing" viewBox="0 0 300 300">
+        <circle class="ring-track" cx="150" cy="150" r="139"></circle>
+        <circle class="ring-progress" id="progress" cx="150" cy="150" r="139"></circle>
+      </svg>
+
+      <div class="clock-content">
+        <div class="time" id="timeDisplay">10:00</div>
+        <div class="clock-caption" id="clockCaption">READY</div>
+
+        <div class="sound-note" id="soundNote">
+          <button id="soundBtn" type="button" aria-label="Turn sound off">
+            <svg id="soundIcon" viewBox="0 0 24 24">
+              <path d="M11 5 6 9H3v6h3l5 4V5Z"/>
+              <path d="M15.5 8.5a5 5 0 0 1 0 7m3-10a9 9 0 0 1 0 13"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 1. Start and Reset -->
+    <div class="actions">
+      <button class="action-btn" id="startBtn" type="button">START</button>
+      <button class="action-btn" id="resetBtn" type="button">RESET</button>
+    </div>
+
+    <!-- 2. Time adjustment -->
+    <div class="adjustments" id="adjustments">
+      <button class="adjust-btn" id="plusMinute" type="button">+ 1 min</button>
+      <button class="adjust-btn" id="minusMinute" type="button">− 1 min</button>
+    </div>
+
+    <!-- 3. Custom time setting -->
+    <div class="custom-time" id="customTime">
+      <input id="customMinutes" type="number" min="0" max="999" placeholder="Min">
+      <span>:</span>
+      <input id="customSeconds" type="number" min="0" max="59" placeholder="Sec">
+      <button class="set-btn" id="setCustom" type="button">Set time</button>
+    </div>
+
+    <!-- 4. Preset options -->
+    <div class="presets" id="presets">
+      <button class="preset" data-minutes="5" type="button">5 min</button>
+      <button class="preset active" data-minutes="10" type="button">10 min</button>
+      <button class="preset" data-minutes="15" type="button">15 min</button>
+      <button class="preset" data-minutes="20" type="button">20 min</button>
+    </div>
+
+  </main>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+
+  const timeDisplay = $('timeDisplay');
+  const caption = $('clockCaption');
+  const progress = $('progress');
+  const circumference = 2 * Math.PI * 139;
+
+  let mode = 'timer';
+  let duration = 600;
+  let remaining = duration;
+  let elapsed = 0;
+
+  let running = false;
+  let finished = false;
+  let endAt = 0;
+  let startedAt = 0;
+  let rafId = null;
+
+  let soundOn = true;
+  let selectedPreset = 10;
+  let audioContext = null;
+
+  let alarmInterval = null;
+  let alarmTimeout = null;
+  let alarmUntil = 0;
+
+  progress.style.strokeDasharray =
+    `${circumference} ${circumference}`;
+
+  // Display total minutes instead of converting to hours
+  function format(seconds) {
+    seconds = Math.max(0, Math.floor(seconds));
+
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+
+    return `${String(minutes).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+  }
+
+  function beep() {
+    if (!soundOn || mode !== 'timer') return;
+
+    try {
+      audioContext = audioContext ||
+        new (window.AudioContext || window.webkitAudioContext)();
+
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+
+      [0, 0.22, 0.44].forEach((delay, i) => {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+
+        oscillator.type = 'sine';
+        oscillator.frequency.value = i === 1 ? 880 : 660;
+
+        gain.gain.setValueAtTime(
+          0.0001, audioContext.currentTime + delay
+        );
+        gain.gain.exponentialRampToValueAtTime(
+          0.18, audioContext.currentTime + delay + 0.025
+        );
+        gain.gain.exponentialRampToValueAtTime(
+          0.0001, audioContext.currentTime + delay + 0.18
+        );
+
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+
+        oscillator.start(audioContext.currentTime + delay);
+        oscillator.stop(audioContext.currentTime + delay + 0.2);
+      });
+    } catch (error) {}
+  }
+
+  function stopAlarm() {
+    if (alarmInterval) {
+      clearInterval(alarmInterval);
+      alarmInterval = null;
+    }
+
+    if (alarmTimeout) {
+      clearTimeout(alarmTimeout);
+      alarmTimeout = null;
+    }
+
+    alarmUntil = 0;
+  }
+
+  function startAlarm() {
+    stopAlarm();
+
+    if (!soundOn || mode !== 'timer') return;
+
+    alarmUntil = Date.now() + 60000;
+
+    beep();
+
+    alarmInterval = setInterval(() => {
+      if (Date.now() >= alarmUntil) {
+        stopAlarm();
+        return;
+      }
+
+      beep();
+    }, 1200);
+
+    alarmTimeout = setTimeout(() => {
+      stopAlarm();
+    }, 60000);
+  }
+
+  function updateSoundIcon() {
+    $('soundIcon').innerHTML = soundOn
+      ? '<path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7m3-10a9 9 0 0 1 0 13"/>'
+      : '<path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="m16 9 5 6m0-6-5 6"/>';
+
+    $('soundBtn').setAttribute(
+      'aria-label',
+      soundOn ? 'Turn sound off' : 'Turn sound on'
+    );
+  }
+
+  function render() {
+    if (mode === 'timer') {
+      const value = running
+        ? Math.max(0, (endAt - Date.now()) / 1000)
+        : remaining;
+
+      const overtime = finished && value <= 0;
+
+      timeDisplay.textContent = overtime
+        ? `+${format(Math.floor((Date.now() - endAt) / 1000))}`
+        : format(value);
+
+      caption.textContent = overtime
+        ? 'OVERTIME'
+        : running
+          ? 'COUNTING DOWN'
+          : finished
+            ? 'COMPLETED'
+            : 'READY';
+
+      const fraction = duration > 0
+        ? Math.min(1, Math.max(0, value / duration))
+        : 0;
+
+      progress.style.strokeDashoffset =
+        `${circumference * (1 - fraction)}`;
+
+    } else {
+      const value = running
+        ? elapsed + (Date.now() - startedAt) / 1000
+        : elapsed;
+
+      timeDisplay.textContent = format(value);
+
+      caption.textContent = running
+        ? 'STOPWATCH RUNNING'
+        : elapsed > 0
+          ? 'STOPWATCH PAUSED'
+          : 'STOPWATCH READY';
+
+      progress.style.strokeDashoffset = '0';
+    }
+
+    $('startBtn').textContent = running
+      ? 'PAUSE'
+      : finished && mode === 'timer'
+        ? 'START AGAIN'
+        : 'START';
+
+    // Hide timer-only controls without changing their positions
+    $('adjustments').classList.toggle('mode-hidden', mode !== 'timer');
+    $('soundNote').classList.toggle('mode-hidden', mode !== 'timer');
+    $('presets').classList.toggle('mode-hidden', mode !== 'timer');
+    $('customTime').classList.toggle('mode-hidden', mode !== 'timer');
+
+    $('progressRing').style.opacity =
+      mode === 'stopwatch' ? '.2' : '1';
+
+    document.querySelectorAll('.preset').forEach(button => {
+      button.classList.toggle(
+        'active',
+        mode === 'timer' &&
+        Number(button.dataset.minutes) === selectedPreset
+      );
+    });
+
+    // Dynamically update browser tab title
+    document.title = `${timeDisplay.textContent} | ${mode === 'timer' ? 'Timer' : 'Stopwatch'}`;
+  }
+
+  // Continue rendering during overtime, even though countdown has stopped
+  function tick() {
+    if (!running && !(mode === 'timer' && finished)) return;
+
+    if (mode === 'timer' && running) {
+      remaining = (endAt - Date.now()) / 1000;
+
+      if (remaining <= 0 && !finished) {
+        remaining = 0;
+        finished = true;
+        running = false;
+
+        startAlarm();
+      }
+    }
+
+    render();
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function start() {
+    if (running) {
+      if (mode === 'timer') {
+        remaining = (endAt - Date.now()) / 1000;
+      } else {
+        elapsed += (Date.now() - startedAt) / 1000;
+      }
+
+      running = false;
+      cancelAnimationFrame(rafId);
+      render();
+      return;
+    }
+
+    if (mode === 'timer') {
+      if (finished) {
+        // Stop the overtime animation before restarting
+        cancelAnimationFrame(rafId);
+        stopAlarm();
+
+        remaining = duration;
+        finished = false;
+      }
+
+      endAt = Date.now() + remaining * 1000;
+
+    } else {
+      startedAt = Date.now();
+    }
+
+    running = true;
+    render();
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function reset() {
+    running = false;
+    cancelAnimationFrame(rafId);
+    stopAlarm();
+
+    if (mode === 'timer') {
+      remaining = duration;
+      finished = false;
+    } else {
+      elapsed = 0;
+    }
+
+    render();
+  }
+
+  function setDuration(seconds, preset = null) {
+    if (!Number.isFinite(seconds) || seconds <= 0) return;
+
+    running = false;
+    cancelAnimationFrame(rafId);
+    stopAlarm();
+
+    duration = Math.floor(seconds);
+    remaining = duration;
+    finished = false;
+    selectedPreset = preset;
+
+    render();
+  }
+
+  function adjustTimer(seconds) {
+    if (mode !== 'timer') return;
+
+    const current = running
+      ? (endAt - Date.now()) / 1000
+      : remaining;
+
+    const next = Math.max(1, current + seconds);
+
+    duration = Math.max(1, duration + seconds);
+    remaining = next;
+    finished = false;
+
+    if (running) {
+      endAt = Date.now() + next * 1000;
+    }
+
+    stopAlarm();
+    render();
+  }
+
+  function switchMode(nextMode) {
+    if (mode === nextMode) return;
+
+    running = false;
+    cancelAnimationFrame(rafId);
+    stopAlarm();
+
+    mode = nextMode;
+
+    $('timerMode').classList.toggle('active', mode === 'timer');
+    $('stopwatchMode').classList.toggle('active', mode === 'stopwatch');
+
+    if (mode === 'timer') {
+      remaining = duration;
+      finished = false;
+    } else {
+      elapsed = 0;
+    }
+
+    render();
+  }
+
+  // Main controls
+  $('startBtn').addEventListener('click', start);
+  $('resetBtn').addEventListener('click', reset);
+
+  $('timerMode').addEventListener('click', () => {
+    switchMode('timer');
+  });
+
+  $('stopwatchMode').addEventListener('click', () => {
+    switchMode('stopwatch');
+  });
+
+  // Countdown-only adjustment controls
+  $('plusMinute').addEventListener('click', () => {
+    adjustTimer(60);
+  });
+
+  $('minusMinute').addEventListener('click', () => {
+    adjustTimer(-60);
+  });
+
+  // Timer presets
+  document.querySelectorAll('.preset').forEach(button => {
+    button.addEventListener('click', () => {
+      setDuration(
+        Number(button.dataset.minutes) * 60,
+        Number(button.dataset.minutes)
+      );
+    });
+  });
+
+  // Custom duration
+  $('setCustom').addEventListener('click', () => {
+    const minutes = Math.max(
+      0, Number($('customMinutes').value) || 0
+    );
+
+    const seconds = Math.min(
+      59, Math.max(0, Number($('customSeconds').value) || 0)
+    );
+
+    setDuration(minutes * 60 + seconds, null);
+  });
+
+  // Sound toggle
+  $('soundBtn').addEventListener('click', () => {
+    soundOn = !soundOn;
+    updateSoundIcon();
+
+    if (!soundOn) {
+      stopAlarm();
+    }
+  });
+
+  // Theme toggle
+  $('themeBtn').addEventListener('click', () => {
+    document.body.classList.toggle('light');
+
+    const light = document.body.classList.contains('light');
+
+    $('themeIcon').innerHTML = light
+      ? '<path d="M20.5 15.5A8.5 8.5 0 0 1 8.5 3.5 8.5 8.5 0 1 0 20.5 15.5Z"/>'
+      : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/>';
+
+    $('themeBtn').setAttribute(
+      'aria-label',
+      light ? 'Switch to dark theme' : 'Switch to light theme'
+    );
+  });
+
+  // Fullscreen
+  $('fullscreenBtn').addEventListener('click', async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (error) {}
+  });
+
+  document.addEventListener('fullscreenchange', () => {
+    document.body.classList.toggle(
+      'fullscreen',
+      Boolean(document.fullscreenElement)
+    );
+
+    $('fullscreenIcon').innerHTML = document.fullscreenElement
+      ? '<path d="M8 3v5H3m13-5v5h5M3 16h5v5m8 0v-5h5"/>'
+      : '<path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/>';
+
+    $('fullscreenBtn').setAttribute(
+      'aria-label',
+      document.fullscreenElement ? 'Exit fullscreen' : 'Enter fullscreen'
+    );
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', event => {
+    if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+      return;
+    }
+
+    if (event.code === 'Space') {
+      event.preventDefault();
+      start();
+    }
+
+    if (event.key.toLowerCase() === 'r') {
+      reset();
+    }
+
+    if (event.key === 'Escape' && document.fullscreenElement) {
+      document.exitFullscreen();
+    }
+  });
+
+  updateSoundIcon();
+  render();
+})();
+</script>
+</body>
+</html>
